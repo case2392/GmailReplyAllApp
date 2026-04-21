@@ -1,0 +1,48 @@
+/* Gmail Reply All Button — styling to match Gmail's native icon buttons */
+
+.gm-reply-all-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0 2px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #5f6368;
+  user-select: none;
+  vertical-align: middle;
+  transition: background-color 0.15s ease;
+}
+
+.gm-reply-all-btn:hover {
+  background-color: rgba(60, 64, 67, 0.08);
+}
+
+.gm-reply-all-btn:active {
+  background-color: rgba(60, 64, 67, 0.16);
+}
+
+.gm-reply-all-btn:focus {
+  outline: none;
+  background-color: rgba(60, 64, 67, 0.12);
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .gm-reply-all-btn {
+    color: #e8eaed;
+  }
+  .gm-reply-all-btn:hover {
+    background-color: rgba(232, 234, 237, 0.08);
+  }
+  .gm-reply-all-btn:active {
+    background-color: rgba(232, 234, 237, 0.16);
+  }
+}
+
+/* Gmail's dark theme uses a body class — cover that too */
+body.dark .gm-reply-all-btn,
+html[dir] body[class*="dark"] .gm-reply-all-btn {
+  color: #e8eaed;
+}
