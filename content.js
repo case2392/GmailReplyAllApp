@@ -1,6 +1,7 @@
 // Gmail Reply All Button - content script
-// Injects a "Reply all" button right before Gmail's "More email options" (⋮) button.
-// On click, programmatically opens that menu and selects "Reply all".
+// For each open email header, injects a "Reply all" button between Gmail's
+// reply control ("Type of response") and the three-dot "More email options"
+// menu. Clicking it programmatically opens that menu and picks "Reply all".
 
 (function () {
   'use strict';
@@ -8,14 +9,19 @@
   const INJECTED_ATTR = 'data-gm-reply-all-injected';
   const BUTTON_CLASS = 'gm-reply-all-btn';
 
-  // Reply-all SVG icon (inherits currentColor)
+  // Gmail's read-view reply control. Unique to the per-email header —
+  // it does NOT appear in the inbox toolbar, so we use it to tell the
+  // per-email-header ⋮ apart from the inbox-toolbar ⋮ (which has the same
+  // aria-label but a menu without a "Reply all" item).
+  const REPLY_ANCHOR_SELECTOR = '[aria-label="Type of response"]';
+  const MORE_SELECTOR = '[role="button"][aria-label="More email options"]';
+
   const REPLY_ALL_ICON = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
       <path fill="currentColor" d="M7 8V5l-7 7 7 7v-3l-4-4 4-4zm6 1V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/>
     </svg>
   `;
 
-  // Match the "Reply all" menuitem in any open Gmail popup menu.
   function findReplyAllMenuItem() {
     const items = document.querySelectorAll('[role="menuitem"]');
     for (const item of items) {
@@ -32,8 +38,8 @@
     return null;
   }
 
-  // Click the More menu, wait for it to render, then click "Reply all".
   function triggerReplyAll(moreBtn) {
+    if (!moreBtn || !document.contains(moreBtn)) return;
     moreBtn.click();
 
     let attempts = 0;
@@ -48,7 +54,7 @@
       }
       if (attempts >= maxAttempts) {
         clearInterval(interval);
-        // Close menu if Reply all isn't in it (e.g. single-recipient email)
+        // Single-recipient email: no Reply all in the menu. Close it.
         document.dispatchEvent(
           new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
         );
@@ -56,7 +62,18 @@
     }, 20);
   }
 
-  function createButton(moreBtn) {
+  // Walk up from the reply anchor to find a container that also holds a
+  // "More email options" button. That pair is the per-email header toolbar.
+  function findMoreButtonNear(anchor) {
+    let cur = anchor.parentElement;
+    for (let i = 0; i < 6 && cur; i++, cur = cur.parentElement) {
+      const more = cur.querySelector(MORE_SELECTOR);
+      if (more) return more;
+    }
+    return null;
+  }
+
+  function createButton(resolveMoreBtn) {
     const btn = document.createElement('div');
     btn.className = BUTTON_CLASS;
     btn.setAttribute('role', 'button');
@@ -68,7 +85,8 @@
     const handler = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      triggerReplyAll(moreBtn);
+      const moreBtn = resolveMoreBtn();
+      if (moreBtn) triggerReplyAll(moreBtn);
     };
 
     btn.addEventListener('click', handler);
@@ -80,27 +98,26 @@
   }
 
   function injectButtons() {
-    // Anchor off the 3-dot menu in each email's header toolbar.
-    // Gmail labels this "More email options" (tooltip: "More").
-    const moreButtons = document.querySelectorAll(
-      '[role="button"][aria-label="More email options"]'
-    );
+    const anchors = document.querySelectorAll(REPLY_ANCHOR_SELECTOR);
+    anchors.forEach((anchor) => {
+      if (anchor.hasAttribute(INJECTED_ATTR)) return;
 
-    moreButtons.forEach((moreBtn) => {
-      if (moreBtn.hasAttribute(INJECTED_ATTR)) return;
-      moreBtn.setAttribute(INJECTED_ATTR, '1');
+      const moreBtn = findMoreButtonNear(anchor);
+      if (!moreBtn) return;
 
-      const btn = createButton(moreBtn);
-      if (moreBtn.parentElement) {
-        moreBtn.parentElement.insertBefore(btn, moreBtn);
-      }
+      anchor.setAttribute(INJECTED_ATTR, '1');
+
+      // Re-resolve on click in case Gmail re-rendered the toolbar since inject.
+      const resolveMoreBtn = () =>
+        document.contains(moreBtn) ? moreBtn : findMoreButtonNear(anchor);
+
+      const btn = createButton(resolveMoreBtn);
+      anchor.parentElement?.insertBefore(btn, anchor.nextSibling);
     });
   }
 
-  // Initial pass
   injectButtons();
 
-  // Gmail re-renders frequently. Watch for new email headers.
   const observer = new MutationObserver((mutations) => {
     for (const m of mutations) {
       if (m.addedNodes.length > 0) {
@@ -111,6 +128,5 @@
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  // Log once so you can confirm the script is running
   console.log('[Gmail Reply All Button] loaded');
 })();
