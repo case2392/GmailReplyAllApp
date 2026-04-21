@@ -31,4 +31,5 @@ To update the extension later, edit files and click the refresh icon on its tile
 - `manifest.json` — MV3 manifest
 - `content.js` — injection + click-routing logic
 - `content.css` — button styling (light + dark theme)
-- `icons/` — 16/48/128 px icons
+
+No extension icons are bundled yet; Chrome shows the default puzzle-piece tile. To add your own, drop `icon16.png` / `icon48.png` / `icon128.png` into an `icons/` folder and re-add the `"icons": { ... }` block to `manifest.json`.
