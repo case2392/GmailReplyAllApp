@@ -339,13 +339,24 @@
       const row = compose.closest('tr');
       if (!row) return;
       const tbody = row.parentElement;
-      if (!tbody || tbody.firstElementChild === row) return;
+      if (!tbody) return;
+      const index = Array.prototype.indexOf.call(tbody.children, row);
+      if (tbody.firstElementChild === row) {
+        // Already at top — nothing to do. Silent to avoid spamming the log.
+        return;
+      }
+      console.log('[Gmail Reply All Button] moving compose row from index', index, 'to top (tbody has', tbody.children.length, 'children)');
       tbody.prepend(row);
       // Gmail scrolls to the compose's original (bottom) position after
       // inserting it. Now that the compose lives at the top, reset the
       // thread pane's scroll to 0 so the viewport follows.
       const scrollContainer = findScrollParent(row);
-      if (scrollContainer) scrollContainer.scrollTop = 0;
+      if (scrollContainer) {
+        scrollContainer.scrollTop = 0;
+        console.log('[Gmail Reply All Button] scrolled', scrollContainer.className, 'to top');
+      } else {
+        console.log('[Gmail Reply All Button] no scroll parent found');
+      }
     });
   }
 
