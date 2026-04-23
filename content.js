@@ -162,11 +162,16 @@
   function applyGuard() {
     const toggle = findToggle();
     if (!toggle) return;
-    // .n6 is the row containing the "More" toggle; fall back to parent.
-    const row = toggle.closest('.n6') || toggle.parentElement;
-    if (row) {
-      row.classList.add(GUARD_CLASS);
-      guardedRow = row;
+    // .wT is the container of the whole "More" block (toggle row + expanded
+    // children). Guarding just .n6 (the row) didn't stop expansion because
+    // Gmail's drag-over handler lives on the parent — pointer-events: none
+    // on the child means events still target the parent, which kept firing.
+    // .wT is a sibling of the Labels section, so drops onto labels remain
+    // interactive while the whole More block goes inert during the drag.
+    const el = toggle.closest('.wT') || toggle.closest('.n6') || toggle.parentElement;
+    if (el) {
+      el.classList.add(GUARD_CLASS);
+      guardedRow = el;
     }
   }
 
