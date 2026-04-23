@@ -322,16 +322,6 @@
   // tbody.firstElementChild puts the compose above all message rows.
   const COMPOSE_SELECTOR = '.aDg';
 
-  function findScrollParent(el) {
-    let cur = el?.parentElement;
-    while (cur) {
-      const cs = getComputedStyle(cur);
-      if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') return cur;
-      cur = cur.parentElement;
-    }
-    return null;
-  }
-
   function moveComposesToTop() {
     document.querySelectorAll(COMPOSE_SELECTOR).forEach((compose) => {
       const r = compose.getBoundingClientRect();
@@ -339,24 +329,13 @@
       const row = compose.closest('tr');
       if (!row) return;
       const tbody = row.parentElement;
-      if (!tbody) return;
-      const index = Array.prototype.indexOf.call(tbody.children, row);
-      if (tbody.firstElementChild === row) {
-        // Already at top — nothing to do. Silent to avoid spamming the log.
-        return;
-      }
-      console.log('[Gmail Reply All Button] moving compose row from index', index, 'to top (tbody has', tbody.children.length, 'children)');
+      if (!tbody || tbody.firstElementChild === row) return;
       tbody.prepend(row);
-      // Gmail scrolls to the compose's original (bottom) position after
-      // inserting it. Now that the compose lives at the top, reset the
-      // thread pane's scroll to 0 so the viewport follows.
-      const scrollContainer = findScrollParent(row);
-      if (scrollContainer) {
-        scrollContainer.scrollTop = 0;
-        console.log('[Gmail Reply All Button] scrolled', scrollContainer.className, 'to top');
-      } else {
-        console.log('[Gmail Reply All Button] no scroll parent found');
-      }
+      // scrollTop=0 on the nearest scroll ancestor was wrong — that
+      // ancestor (.Nu.S3.aZ6) contains content above the thread, so its
+      // zero offset isn't where the compose lives. Let the browser pick
+      // the right scrollable ancestor via scrollIntoView.
+      row.scrollIntoView({ block: 'start', behavior: 'auto' });
     });
   }
 
