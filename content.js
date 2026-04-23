@@ -159,16 +159,22 @@
   const findToggle = () => document.querySelector(`${MORE_COLLAPSED}, ${MORE_EXPANDED}`);
   const isExpanded = (el) => el?.getAttribute('aria-label') === 'Less labels';
 
-  function applyMaskIfExpanded() {
+  function applyMaskIfNeeded() {
     if (!dragActive || !dragStartedCollapsed) return;
     const toggle = findToggle();
-    if (!toggle || !isExpanded(toggle)) return;
+    if (!toggle) return;
     const row = toggle.closest('.n6');
     const sibling = row?.nextElementSibling;
     if (!sibling || sibling === maskedEl) return;
+    // Sanity: only tag if this really is the expanded-More block. The sibling
+    // div persists in the DOM even while collapsed (just shown/hidden by
+    // Gmail), so we can't rely on aria-label state — match the content names
+    // instead to avoid accidentally hiding Labels or another section.
+    const text = (sibling.textContent || '').slice(0, 400);
+    if (!/Important|Spam|Trash|All Mail|Manage labels/i.test(text)) return;
     sibling.classList.add(MASK_CLASS);
     maskedEl = sibling;
-    console.log('[Gmail Reply All Button] masked expanded "More" content');
+    console.log('[Gmail Reply All Button] masked "More" expanded content');
   }
 
   function removeMask() {
@@ -194,11 +200,11 @@
     console.log('[Gmail Reply All Button] drag detected, startedCollapsed =', dragStartedCollapsed);
     if (dragStartedCollapsed) {
       // Gmail's expand mechanism doesn't go through DOM events we can block,
-      // so instead of preventing expansion we mask it visually. The
-      // MutationObserver below watches for aria-label flipping to "Less
-      // labels" during the drag and tags the expanded sibling div with a
-      // class that CSS hides.
-      applyMaskIfExpanded();
+      // so instead of preventing expansion we mask it visually. Tag the
+      // expanded-content sibling immediately — it's already in the DOM
+      // even when "More" is collapsed, and our display:none override
+      // keeps it hidden regardless of Gmail's internal state.
+      applyMaskIfNeeded();
     }
   }
 
@@ -273,10 +279,10 @@
     window.addEventListener(t, interceptIfOverMoreRow, true);
   });
 
-  // Main defense: when aria-label flips to "Less labels" during a drag, tag
-  // the expanded sibling div so CSS hides it.
+  // Fallback: if Gmail re-creates the sibling div during the drag (child
+  // list change on .wT), catch it and re-tag.
   const expansionObserver = new MutationObserver(() => {
-    applyMaskIfExpanded();
+    applyMaskIfNeeded();
   });
 
   function startObserving() {
@@ -290,6 +296,7 @@
     expansionObserver.observe(container, {
       attributes: true,
       attributeFilter: ['aria-label'],
+      childList: true,
       subtree: true,
     });
   }
