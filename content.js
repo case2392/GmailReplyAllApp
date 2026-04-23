@@ -325,11 +325,20 @@
   // common ancestor at runtime by walking up both chains, and insert the
   // compose's branch before the email's branch at that level.
   const COMPOSE_SELECTOR = '.aDg';
+  // Tracks which compose elements are currently visible so we can detect
+  // the hidden→visible transition. Gmail reuses the same <.aDg> element
+  // for delete+reopen cycles, so without this we'd short-circuit silently
+  // and never scroll the viewport to the compose on the second reply.
+  const composeVisibility = new WeakMap();
 
   function moveComposesToTop() {
     document.querySelectorAll(COMPOSE_SELECTOR).forEach((compose) => {
       const cr = compose.getBoundingClientRect();
-      if (cr.width === 0 || cr.height === 0) return; // hidden / detached
+      const isVisible = cr.width > 0 && cr.height > 0;
+      const wasVisible = composeVisibility.get(compose) === true;
+      composeVisibility.set(compose, isVisible);
+      if (!isVisible) return;
+      const justBecameVisible = !wasVisible;
 
       // Anchor on a visible email body to locate the common ancestor.
       const body = [...document.querySelectorAll('.a3s')].find((e) => {
@@ -362,37 +371,32 @@
       }
 
       if (composeBranch === bodyBranch) return;
-      if (composeBranch.nextElementSibling === bodyBranch) {
-        // Already before body — likely a spurious observer fire. Don't
-        // re-scroll; the user may have scrolled manually.
-        return;
+      const alreadyBefore = composeBranch.nextElementSibling === bodyBranch;
+
+      if (!alreadyBefore) {
+        console.log('[Gmail Reply All Button] moving compose branch above email body branch');
+        commonAncestor.insertBefore(composeBranch, bodyBranch);
       }
 
-      console.log('[Gmail Reply All Button] moving compose branch above email body branch');
-      commonAncestor.insertBefore(composeBranch, bodyBranch);
-
-      // Scroll the whole compose branch (.gA wrapper) into view, not the
-      // inner .aDg. .aDg is only ~60 px (just the Send row); the rest of
-      // the compose is rendered via absolute-positioned overlays that
-      // extend upward from .aDg, so scrolling to .aDg lands the Send row
-      // at the top and leaves the recipients/body above the viewport.
-      // composeBranch spans the full compose area vertically.
-      //
-      // Gmail queues its own post-insert scroll, and on a second Reply
-      // (delete + reopen) that scroll can fire later than on a fresh
-      // thread load. Chase with 0 / 150 / 400 / 800 ms so we win regardless
-      // of Gmail's timing.
-      const scrollIn = () => {
-        const r = composeBranch.getBoundingClientRect();
-        console.log('[Gmail Reply All Button] scrollIn, branch y =', Math.round(r.y));
-        composeBranch.scrollIntoView({ block: 'start', behavior: 'auto' });
-      };
-      scrollIn();
-      setTimeout(scrollIn, 150);
-      setTimeout(scrollIn, 400);
-      setTimeout(scrollIn, 800);
-      setTimeout(scrollIn, 1500);
-      setTimeout(scrollIn, 2500);
+      // Scroll if we just moved the compose OR if the compose is newly
+      // visible (new reply, or reopen after delete — Gmail reuses the
+      // already-at-top wrapper so nothing moves but the viewport stayed
+      // wherever the user left it). Skip scroll on mutations that happen
+      // while the user is typing in an already-positioned compose.
+      if (!alreadyBefore || justBecameVisible) {
+        console.log('[Gmail Reply All Button] scrolling compose into view (moved=%s newlyVisible=%s)', !alreadyBefore, justBecameVisible);
+        const scrollIn = () => {
+          const r = composeBranch.getBoundingClientRect();
+          console.log('[Gmail Reply All Button] scrollIn, branch y =', Math.round(r.y));
+          composeBranch.scrollIntoView({ block: 'start', behavior: 'auto' });
+        };
+        scrollIn();
+        setTimeout(scrollIn, 150);
+        setTimeout(scrollIn, 400);
+        setTimeout(scrollIn, 800);
+        setTimeout(scrollIn, 1500);
+        setTimeout(scrollIn, 2500);
+      }
     });
   }
 
