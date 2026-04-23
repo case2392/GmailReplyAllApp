@@ -150,16 +150,32 @@
 
   const MORE_COLLAPSED = '[aria-label="More labels"]';
   const MORE_EXPANDED = '[aria-label="Less labels"]';
+  const MASK_CLASS = 'gm-more-drag-mask-target';
 
   let dragActive = false;
   let dragStartedCollapsed = false;
+  let maskedEl = null;
 
   const findToggle = () => document.querySelector(`${MORE_COLLAPSED}, ${MORE_EXPANDED}`);
   const isExpanded = (el) => el?.getAttribute('aria-label') === 'Less labels';
 
-  function collapseNow() {
-    const expanded = document.querySelector(MORE_EXPANDED);
-    if (expanded) expanded.click();
+  function applyMaskIfExpanded() {
+    if (!dragActive || !dragStartedCollapsed) return;
+    const toggle = findToggle();
+    if (!toggle || !isExpanded(toggle)) return;
+    const row = toggle.closest('.n6');
+    const sibling = row?.nextElementSibling;
+    if (!sibling || sibling === maskedEl) return;
+    sibling.classList.add(MASK_CLASS);
+    maskedEl = sibling;
+    console.log('[Gmail Reply All Button] masked expanded "More" content');
+  }
+
+  function removeMask() {
+    if (maskedEl) {
+      maskedEl.classList.remove(MASK_CLASS);
+      maskedEl = null;
+    }
   }
 
   function getMoreRowRect() {
@@ -175,21 +191,22 @@
     // Only fight expansion if the user had it collapsed when the drag began;
     // a manually-expanded state should survive the drag.
     dragStartedCollapsed = !!toggle && !isExpanded(toggle);
+    console.log('[Gmail Reply All Button] drag detected, startedCollapsed =', dragStartedCollapsed);
     if (dragStartedCollapsed) {
-      // Visually mask any auto-expansion via CSS (see content.css). Gmail's
-      // expand handler doesn't go through normal DOM events, so we can't
-      // prevent the state change — we just hide the result.
-      document.body?.classList.add('gm-more-drag-mask');
-      // Best-effort: also try to actually collapse, in case Gmail's state
-      // machine listens for the click.
-      collapseNow();
+      // Gmail's expand mechanism doesn't go through DOM events we can block,
+      // so instead of preventing expansion we mask it visually. The
+      // MutationObserver below watches for aria-label flipping to "Less
+      // labels" during the drag and tags the expanded sibling div with a
+      // class that CSS hides.
+      applyMaskIfExpanded();
     }
   }
 
   const endDrag = () => {
+    if (dragActive) console.log('[Gmail Reply All Button] drag ended');
     dragActive = false;
     dragStartedCollapsed = false;
-    document.body?.classList.remove('gm-more-drag-mask');
+    removeMask();
   };
 
   document.addEventListener('dragstart', beginDrag, true);
@@ -256,9 +273,10 @@
     window.addEventListener(t, interceptIfOverMoreRow, true);
   });
 
-  // Fallback: if the section still gets expanded for any reason, collapse it.
+  // Main defense: when aria-label flips to "Less labels" during a drag, tag
+  // the expanded sibling div so CSS hides it.
   const expansionObserver = new MutationObserver(() => {
-    if (dragActive && dragStartedCollapsed) collapseNow();
+    applyMaskIfExpanded();
   });
 
   function startObserving() {
