@@ -55,3 +55,11 @@ html[dir] body[class*="dark"] .gm-reply-all-btn {
   color: #e8eaed;
 }
 
+/* Mask Gmail's auto-expansion of the sidebar "More" section during an
+   email drag. The expanded content lives in the <div> that sits as the
+   immediate next sibling of the .n6 More-toggle row, rendered only when
+   the toggle is in its "Less labels" state. Hide it so the sidebar looks
+   collapsed regardless of what Gmail's state machine is doing. */
+body.gm-more-drag-mask .n6:has([aria-label="Less labels"]) + div {
+  display: none !important;
+}

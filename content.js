@@ -175,13 +175,21 @@
     // Only fight expansion if the user had it collapsed when the drag began;
     // a manually-expanded state should survive the drag.
     dragStartedCollapsed = !!toggle && !isExpanded(toggle);
-    console.log('[Gmail Reply All Button] drag detected, startedCollapsed =', dragStartedCollapsed);
-    if (dragStartedCollapsed) collapseNow();
+    if (dragStartedCollapsed) {
+      // Visually mask any auto-expansion via CSS (see content.css). Gmail's
+      // expand handler doesn't go through normal DOM events, so we can't
+      // prevent the state change — we just hide the result.
+      document.body?.classList.add('gm-more-drag-mask');
+      // Best-effort: also try to actually collapse, in case Gmail's state
+      // machine listens for the click.
+      collapseNow();
+    }
   }
 
   const endDrag = () => {
     dragActive = false;
     dragStartedCollapsed = false;
+    document.body?.classList.remove('gm-more-drag-mask');
   };
 
   document.addEventListener('dragstart', beginDrag, true);
