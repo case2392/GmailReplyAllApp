@@ -25,8 +25,14 @@
   const REPLY_ALL_ICON = `<img src="https://ssl.gstatic.com/ui/v1/icons/mail/gm3/1x/reply_all_baseline_nv700_20dp.png" width="20" height="20" alt="" aria-hidden="true" draggable="false">`;
 
   function findReplyAllMenuItem() {
+    // Gmail pre-renders many hidden menus (help, inbox ⋮, other messages' ⋮).
+    // Their menuitems stay in the DOM but have zero-size rects. Only the
+    // just-opened menu's items are actually visible — match against those.
     const items = document.querySelectorAll('[role="menuitem"]');
     for (const item of items) {
+      const r = item.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      if (item.getAttribute('aria-disabled') === 'true') continue;
       const text = (item.textContent || '').trim();
       const aria = item.getAttribute('aria-label') || '';
       if (
