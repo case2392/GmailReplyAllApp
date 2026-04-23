@@ -63,3 +63,16 @@ html[dir] body[class*="dark"] .gm-reply-all-btn {
 .gm-more-drag-mask-target {
   display: none !important;
 }
+
+/* Inline compose wrapper needs an explicit positioning context when we
+   move it to the top of the thread. Gmail's compose has internal
+   position:absolute children (.aDj, .Ur's toolbar wrapper) that assume
+   they resolve against a positioned ancestor set up by the thread's
+   bottom slot; when the compose moves, they end up resolving against
+   the viewport and the formatting toolbar can land on top of the
+   To/Cc/Bcc recipient row. position:relative on the compose wrapper
+   pins absolute children to the compose box, where they're designed
+   to live. */
+.aDg {
+  position: relative !important;
+}
