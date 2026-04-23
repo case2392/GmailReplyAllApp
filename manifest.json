@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gmail Reply All Button",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "description": "Gmail quality-of-life tweaks: Reply All button in the email header, suppress sidebar More auto-expand during drag, move the inline reply compose to the top of the thread.",
   "content_scripts": [
     {

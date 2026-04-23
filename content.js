@@ -342,13 +342,11 @@
       if (!firstSibling || firstSibling === wrapper) return;
       console.log('[Gmail Reply All Button] moving compose .gA wrapper above first message');
       parent.insertBefore(wrapper, firstSibling);
-      const scrollIn = () => wrapper.scrollIntoView({ block: 'start', behavior: 'auto' });
-      // Gmail queues its own scroll-to-compose (targeting the original
-      // bottom position) on the next frame after its insert — our
-      // immediate scroll loses that race. Do both: scroll now, then again
-      // shortly after so Gmail's scroll gets overridden.
-      scrollIn();
-      setTimeout(scrollIn, 100);
+      // Intentionally no scroll here. Every scroll call we've tried
+      // (scrollTop=0, scrollIntoView, 100ms chase) has either lost to
+      // Gmail's scroll-after-insert or seemingly caused Gmail to re-append
+      // the compose back to the bottom. Leave scroll to the user for now
+      // and revisit once the move is confirmed stable.
     });
   }
 
