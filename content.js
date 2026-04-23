@@ -322,6 +322,16 @@
   // tbody.firstElementChild puts the compose above all message rows.
   const COMPOSE_SELECTOR = '.aDg';
 
+  function findScrollParent(el) {
+    let cur = el?.parentElement;
+    while (cur) {
+      const cs = getComputedStyle(cur);
+      if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') return cur;
+      cur = cur.parentElement;
+    }
+    return null;
+  }
+
   function moveComposesToTop() {
     document.querySelectorAll(COMPOSE_SELECTOR).forEach((compose) => {
       const r = compose.getBoundingClientRect();
@@ -331,15 +341,11 @@
       const tbody = row.parentElement;
       if (!tbody || tbody.firstElementChild === row) return;
       tbody.prepend(row);
-      // Gmail scrolls the thread to the compose's original position right
-      // after inserting it; our move runs too late to prevent that, so the
-      // viewport ends up at the old bottom location. Follow up with our
-      // own scrollIntoView — immediately, then again on the next few
-      // animation frames to override any deferred scroll Gmail queues.
-      const scrollToCompose = () => row.scrollIntoView({ block: 'start', behavior: 'auto' });
-      scrollToCompose();
-      setTimeout(scrollToCompose, 50);
-      setTimeout(scrollToCompose, 200);
+      // Gmail scrolls to the compose's original (bottom) position after
+      // inserting it. Now that the compose lives at the top, reset the
+      // thread pane's scroll to 0 so the viewport follows.
+      const scrollContainer = findScrollParent(row);
+      if (scrollContainer) scrollContainer.scrollTop = 0;
     });
   }
 
