@@ -317,25 +317,32 @@
 (function () {
   'use strict';
 
-  // Gmail wraps the inline compose in <div class="aDg">, nested inside a
-  // <tr> in the thread's <table class="iN"> tbody. Moving that <tr> to be
-  // tbody.firstElementChild puts the compose above all message rows.
+  // Gmail wraps the inline compose in <div class="aDg">. Each message AND
+  // the compose live inside their own <div class="gA gt"> wrapper; those
+  // wrappers are siblings inside the thread content container. Moving the
+  // compose's .gA wrapper to before the first .gA sibling (the top message)
+  // puts the compose above all messages visually.
+  //
+  // The previous approach reordered the <tr> inside a small inner
+  // <table class="iN"> that only contains the compose — so it was a visual
+  // no-op: DOM index 0 but compose still after every message wrapper.
   const COMPOSE_SELECTOR = '.aDg';
+  const WRAPPER_SELECTOR = '.gA';
 
   function moveComposesToTop() {
     document.querySelectorAll(COMPOSE_SELECTOR).forEach((compose) => {
       const r = compose.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return; // hidden / detached
-      const row = compose.closest('tr');
-      if (!row) return;
-      const tbody = row.parentElement;
-      if (!tbody || tbody.firstElementChild === row) return;
-      tbody.prepend(row);
-      // scrollTop=0 on the nearest scroll ancestor was wrong — that
-      // ancestor (.Nu.S3.aZ6) contains content above the thread, so its
-      // zero offset isn't where the compose lives. Let the browser pick
-      // the right scrollable ancestor via scrollIntoView.
-      row.scrollIntoView({ block: 'start', behavior: 'auto' });
+      const wrapper = compose.closest(WRAPPER_SELECTOR);
+      if (!wrapper) return;
+      const parent = wrapper.parentElement;
+      if (!parent) return;
+      // Target: before the first .gA sibling. If we're already there, no-op.
+      const firstSibling = parent.querySelector(`:scope > ${WRAPPER_SELECTOR}`);
+      if (!firstSibling || firstSibling === wrapper) return;
+      console.log('[Gmail Reply All Button] moving compose .gA wrapper above first message');
+      parent.insertBefore(wrapper, firstSibling);
+      wrapper.scrollIntoView({ block: 'start', behavior: 'auto' });
     });
   }
 
