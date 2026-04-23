@@ -366,6 +366,15 @@
 
       console.log('[Gmail Reply All Button] moving compose branch above email body branch');
       commonAncestor.insertBefore(composeBranch, bodyBranch);
+
+      // Scroll compose into view. Gmail queues its own scroll after the
+      // insert (targeting the old bottom position); do an immediate scroll
+      // then a 150 ms follow-up so we win the race. Now that we're moving
+      // the correct branch, scroll is safe (the earlier scroll regressions
+      // were due to targeting a phantom inner sub-table).
+      const scrollIn = () => composeBranch.scrollIntoView({ block: 'start', behavior: 'auto' });
+      scrollIn();
+      setTimeout(scrollIn, 150);
     });
   }
 
