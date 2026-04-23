@@ -391,6 +391,8 @@
       setTimeout(scrollIn, 150);
       setTimeout(scrollIn, 400);
       setTimeout(scrollIn, 800);
+      setTimeout(scrollIn, 1500);
+      setTimeout(scrollIn, 2500);
     });
   }
 
