@@ -362,19 +362,27 @@
       }
 
       if (composeBranch === bodyBranch) return;
-      if (composeBranch.nextElementSibling === bodyBranch) return; // already before body
+      if (composeBranch.nextElementSibling === bodyBranch) {
+        // Already before body — likely a spurious observer fire. Don't
+        // re-scroll; the user may have scrolled manually.
+        return;
+      }
 
       console.log('[Gmail Reply All Button] moving compose branch above email body branch');
       commonAncestor.insertBefore(composeBranch, bodyBranch);
 
-      // Scroll compose into view. Gmail queues its own scroll after the
-      // insert (targeting the old bottom position); do an immediate scroll
-      // then a 150 ms follow-up so we win the race. Now that we're moving
-      // the correct branch, scroll is safe (the earlier scroll regressions
-      // were due to targeting a phantom inner sub-table).
-      const scrollIn = () => composeBranch.scrollIntoView({ block: 'start', behavior: 'auto' });
+      // Scroll the compose (.aDg) itself into view, not the wrapper — the
+      // wrapper includes ~40 px of padding above the actual compose, so
+      // scrolling to the wrapper leaves that padding at the top of the
+      // viewport. Scrolling to .aDg lands the compose UI right at the top.
+      //
+      // Gmail queues its own scroll after the insert, and on a second
+      // Reply (after delete + reopen) that scroll can fire later than
+      // after a fresh thread load — chase with 0 / 150 / 400 ms calls.
+      const scrollIn = () => compose.scrollIntoView({ block: 'start', behavior: 'auto' });
       scrollIn();
       setTimeout(scrollIn, 150);
+      setTimeout(scrollIn, 400);
     });
   }
 
