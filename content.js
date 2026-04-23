@@ -122,17 +122,22 @@
     });
   }
 
-  injectButtons();
-
-  const observer = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      if (m.addedNodes.length > 0) {
-        injectButtons();
-        break;
+  function startInjection() {
+    injectButtons();
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.addedNodes.length > 0) {
+          injectButtons();
+          break;
+        }
       }
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  // At document_start, document.body may not exist yet.
+  if (document.body) startInjection();
+  else document.addEventListener('DOMContentLoaded', startInjection, { once: true });
 
   console.log('[Gmail Reply All Button] loaded');
 })();
@@ -170,6 +175,7 @@
     // Only fight expansion if the user had it collapsed when the drag began;
     // a manually-expanded state should survive the drag.
     dragStartedCollapsed = !!toggle && !isExpanded(toggle);
+    console.log('[Gmail Reply All Button] drag detected, startedCollapsed =', dragStartedCollapsed);
     if (dragStartedCollapsed) collapseNow();
   }
 
