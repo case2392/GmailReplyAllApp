@@ -246,7 +246,10 @@
   ['mousemove', 'pointermove'].forEach((t) =>
     document.addEventListener(t, onMove, { capture: true, passive: true })
   );
-  ['mouseup', 'pointerup', 'mouseleave'].forEach((t) =>
+  // NOTE: intentionally not listening for mouseleave — capture-phase listeners
+  // on document fire for every element-level mouseleave during the drag, which
+  // would end our drag state after the first cursor motion.
+  ['mouseup', 'pointerup', 'pointercancel'].forEach((t) =>
     document.addEventListener(t, onUp, true)
   );
 
