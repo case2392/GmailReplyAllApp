@@ -309,3 +309,37 @@
   }
   startObserving();
 })();
+
+// Move the inline reply / reply-all / forward compose panel to the top of
+// the thread. By default Gmail renders it below the last message, which
+// pushes the most recent message off-screen — forcing a scroll-up to read
+// the message you're replying to.
+(function () {
+  'use strict';
+
+  // Gmail wraps the inline compose in <div class="aDg">, nested inside a
+  // <tr> in the thread's <table class="iN"> tbody. Moving that <tr> to be
+  // tbody.firstElementChild puts the compose above all message rows.
+  const COMPOSE_SELECTOR = '.aDg';
+
+  function moveComposesToTop() {
+    document.querySelectorAll(COMPOSE_SELECTOR).forEach((compose) => {
+      const r = compose.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return; // hidden / detached
+      const row = compose.closest('tr');
+      if (!row) return;
+      const tbody = row.parentElement;
+      if (!tbody || tbody.firstElementChild === row) return;
+      tbody.prepend(row);
+    });
+  }
+
+  function start() {
+    moveComposesToTop();
+    const observer = new MutationObserver(() => moveComposesToTop());
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.body) start();
+  else document.addEventListener('DOMContentLoaded', start, { once: true });
+})();
