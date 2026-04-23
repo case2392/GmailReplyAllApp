@@ -136,3 +136,60 @@
 
   console.log('[Gmail Reply All Button] loaded');
 })();
+
+// Suppress Gmail's auto-expansion of the sidebar's "More" section when an
+// email is dragged toward the sidebar. If the user had it collapsed before
+// the drag, keep it collapsed throughout.
+(function () {
+  'use strict';
+
+  const MORE_COLLAPSED = '[aria-label="More labels"]';
+  const MORE_EXPANDED = '[aria-label="Less labels"]';
+
+  let dragActive = false;
+  let dragStartedCollapsed = false;
+
+  const findToggle = () => document.querySelector(`${MORE_COLLAPSED}, ${MORE_EXPANDED}`);
+  const isExpanded = (el) => el?.getAttribute('aria-label') === 'Less labels';
+
+  function collapseNow() {
+    const expanded = document.querySelector(MORE_EXPANDED);
+    if (expanded) expanded.click();
+  }
+
+  document.addEventListener('dragstart', () => {
+    dragActive = true;
+    const toggle = findToggle();
+    // Only fight expansion if the user had it collapsed when the drag began;
+    // a manually-expanded state should survive the drag.
+    dragStartedCollapsed = !!toggle && !isExpanded(toggle);
+  }, true);
+
+  const endDrag = () => {
+    dragActive = false;
+    dragStartedCollapsed = false;
+  };
+  document.addEventListener('dragend', endDrag, true);
+  document.addEventListener('drop', endDrag, true);
+
+  const expansionObserver = new MutationObserver(() => {
+    if (dragActive && dragStartedCollapsed) collapseNow();
+  });
+
+  function startObserving() {
+    const toggle = findToggle();
+    if (!toggle) {
+      setTimeout(startObserving, 500);
+      return;
+    }
+    // Observe the nearest sidebar-like ancestor so we don't scan the whole DOM.
+    const container =
+      toggle.closest('.yJ, .nM, [role="navigation"]') || toggle.parentElement;
+    expansionObserver.observe(container, {
+      attributes: true,
+      attributeFilter: ['aria-label'],
+      subtree: true,
+    });
+  }
+  startObserving();
+})();

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Gmail Reply All Button",
-  "version": "1.0.7",
-  "description": "Adds a Reply All button next to Reply in Gmail's email header so you don't have to open the 3-dot menu.",
+  "version": "1.0.8",
+  "description": "Adds a Reply All button next to Reply in Gmail's email header, and keeps the sidebar's \"More\" section from auto-expanding when dragging emails.",
   "content_scripts": [
     {
       "matches": ["https://mail.google.com/*"],
