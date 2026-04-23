@@ -177,7 +177,8 @@
     }
   }
 
-  document.addEventListener('dragstart', () => {
+  function beginDrag() {
+    if (dragActive) return;
     dragActive = true;
     const toggle = findToggle();
     // Only fight expansion if the user had it collapsed when the drag began;
@@ -185,21 +186,53 @@
     dragStartedCollapsed = !!toggle && !isExpanded(toggle);
     if (dragStartedCollapsed) {
       // pointer-events: none on the row prevents Gmail's own dragenter /
-      // dragover handler from firing there, so it never tries to expand.
+      // dragover (or custom mousemove) handler from firing there, so it
+      // never tries to expand.
       applyGuard();
       // Belt-and-suspenders: in case Gmail already started expanding in the
       // same tick (before our listener disabled the row), collapse once.
       collapseNow();
     }
-  }, true);
+  }
 
   const endDrag = () => {
     dragActive = false;
     dragStartedCollapsed = false;
     removeGuard();
   };
+
+  // HTML5 drag events (not used by Gmail for emails in practice, but cheap
+  // to cover in case a future Gmail build switches to them).
+  document.addEventListener('dragstart', beginDrag, true);
   document.addEventListener('dragend', endDrag, true);
   document.addEventListener('drop', endDrag, true);
+
+  // Gmail uses a custom mouse-based drag for emails — no dragstart fires.
+  // Detect it: left-button mousedown, then movement past a threshold.
+  let downPos = null;
+  const onDown = (e) => {
+    if (e.button != null && e.button !== 0) return;
+    downPos = { x: e.clientX, y: e.clientY };
+  };
+  const onMove = (e) => {
+    if (!downPos || dragActive) return;
+    const dx = e.clientX - downPos.x;
+    const dy = e.clientY - downPos.y;
+    if (Math.hypot(dx, dy) > 8) beginDrag();
+  };
+  const onUp = () => {
+    downPos = null;
+    if (dragActive) endDrag();
+  };
+  ['mousedown', 'pointerdown'].forEach((t) =>
+    document.addEventListener(t, onDown, true)
+  );
+  ['mousemove', 'pointermove'].forEach((t) =>
+    document.addEventListener(t, onMove, { capture: true, passive: true })
+  );
+  ['mouseup', 'pointerup', 'mouseleave'].forEach((t) =>
+    document.addEventListener(t, onUp, true)
+  );
 
   // Fallback: if Gmail somehow expands the section from outside the guarded
   // row (e.g. via a document-level handler), observe and re-collapse.
