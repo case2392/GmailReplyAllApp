@@ -331,6 +331,15 @@
       const tbody = row.parentElement;
       if (!tbody || tbody.firstElementChild === row) return;
       tbody.prepend(row);
+      // Gmail scrolls the thread to the compose's original position right
+      // after inserting it; our move runs too late to prevent that, so the
+      // viewport ends up at the old bottom location. Follow up with our
+      // own scrollIntoView — immediately, then again on the next few
+      // animation frames to override any deferred scroll Gmail queues.
+      const scrollToCompose = () => row.scrollIntoView({ block: 'start', behavior: 'auto' });
+      scrollToCompose();
+      setTimeout(scrollToCompose, 50);
+      setTimeout(scrollToCompose, 200);
     });
   }
 
