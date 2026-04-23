@@ -22,11 +22,7 @@
     '[role="button"][aria-label="More email options"]',
   ].join(',');
 
-  const REPLY_ALL_ICON = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-      <path fill="currentColor" d="M7 8V5l-7 7 7 7v-3l-4-4 4-4zm6 1V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/>
-    </svg>
-  `;
+  const REPLY_ALL_ICON = `<img src="https://ssl.gstatic.com/ui/v1/icons/mail/gm3/1x/reply_all_baseline_nv700_20dp.png" width="20" height="20" alt="" aria-hidden="true" draggable="false">`;
 
   function findReplyAllMenuItem() {
     const items = document.querySelectorAll('[role="menuitem"]');
