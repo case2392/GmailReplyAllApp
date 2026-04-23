@@ -371,18 +371,26 @@
       console.log('[Gmail Reply All Button] moving compose branch above email body branch');
       commonAncestor.insertBefore(composeBranch, bodyBranch);
 
-      // Scroll the compose (.aDg) itself into view, not the wrapper — the
-      // wrapper includes ~40 px of padding above the actual compose, so
-      // scrolling to the wrapper leaves that padding at the top of the
-      // viewport. Scrolling to .aDg lands the compose UI right at the top.
+      // Scroll the whole compose branch (.gA wrapper) into view, not the
+      // inner .aDg. .aDg is only ~60 px (just the Send row); the rest of
+      // the compose is rendered via absolute-positioned overlays that
+      // extend upward from .aDg, so scrolling to .aDg lands the Send row
+      // at the top and leaves the recipients/body above the viewport.
+      // composeBranch spans the full compose area vertically.
       //
-      // Gmail queues its own scroll after the insert, and on a second
-      // Reply (after delete + reopen) that scroll can fire later than
-      // after a fresh thread load — chase with 0 / 150 / 400 ms calls.
-      const scrollIn = () => compose.scrollIntoView({ block: 'start', behavior: 'auto' });
+      // Gmail queues its own post-insert scroll, and on a second Reply
+      // (delete + reopen) that scroll can fire later than on a fresh
+      // thread load. Chase with 0 / 150 / 400 / 800 ms so we win regardless
+      // of Gmail's timing.
+      const scrollIn = () => {
+        const r = composeBranch.getBoundingClientRect();
+        console.log('[Gmail Reply All Button] scrollIn, branch y =', Math.round(r.y));
+        composeBranch.scrollIntoView({ block: 'start', behavior: 'auto' });
+      };
       scrollIn();
       setTimeout(scrollIn, 150);
       setTimeout(scrollIn, 400);
+      setTimeout(scrollIn, 800);
     });
   }
 
