@@ -317,36 +317,55 @@
 (function () {
   'use strict';
 
-  // Gmail wraps the inline compose in <div class="aDg">. Each message AND
-  // the compose live inside their own <div class="gA gt"> wrapper; those
-  // wrappers are siblings inside the thread content container. Moving the
-  // compose's .gA wrapper to before the first .gA sibling (the top message)
-  // puts the compose above all messages visually.
-  //
-  // The previous approach reordered the <tr> inside a small inner
-  // <table class="iN"> that only contains the compose — so it was a visual
-  // no-op: DOM index 0 but compose still after every message wrapper.
+  // The compose and the email body don't share a wrapper class — only the
+  // compose has a <div class="gA gt"> wrapper; the email body lives under
+  // <div class="adn ads"> instead. Both sit as sibling direct children of
+  // a common ancestor (the thread content container, whose id is dynamic,
+  // e.g. "avWBGd-8"). To move the compose above the email, find that
+  // common ancestor at runtime by walking up both chains, and insert the
+  // compose's branch before the email's branch at that level.
   const COMPOSE_SELECTOR = '.aDg';
-  const WRAPPER_SELECTOR = '.gA';
 
   function moveComposesToTop() {
     document.querySelectorAll(COMPOSE_SELECTOR).forEach((compose) => {
-      const r = compose.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) return; // hidden / detached
-      const wrapper = compose.closest(WRAPPER_SELECTOR);
-      if (!wrapper) return;
-      const parent = wrapper.parentElement;
-      if (!parent) return;
-      // Target: before the first .gA sibling. If we're already there, no-op.
-      const firstSibling = parent.querySelector(`:scope > ${WRAPPER_SELECTOR}`);
-      if (!firstSibling || firstSibling === wrapper) return;
-      console.log('[Gmail Reply All Button] moving compose .gA wrapper above first message');
-      parent.insertBefore(wrapper, firstSibling);
-      // Intentionally no scroll here. Every scroll call we've tried
-      // (scrollTop=0, scrollIntoView, 100ms chase) has either lost to
-      // Gmail's scroll-after-insert or seemingly caused Gmail to re-append
-      // the compose back to the bottom. Leave scroll to the user for now
-      // and revisit once the move is confirmed stable.
+      const cr = compose.getBoundingClientRect();
+      if (cr.width === 0 || cr.height === 0) return; // hidden / detached
+
+      // Anchor on a visible email body to locate the common ancestor.
+      const body = [...document.querySelectorAll('.a3s')].find((e) => {
+        const r = e.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      });
+      if (!body) return;
+
+      // Collect body's ancestor set, then walk up from compose to the first
+      // ancestor whose parent is also in body's ancestor set — that parent
+      // is the lowest common ancestor.
+      const bodyAncestors = new Set();
+      for (let p = body; p; p = p.parentElement) bodyAncestors.add(p);
+
+      let composeBranch = null;
+      let commonAncestor = null;
+      for (let p = compose; p && p.parentElement; p = p.parentElement) {
+        if (bodyAncestors.has(p.parentElement)) {
+          composeBranch = p;
+          commonAncestor = p.parentElement;
+          break;
+        }
+      }
+      if (!commonAncestor) return;
+
+      // Body's direct child of the common ancestor.
+      let bodyBranch = body;
+      while (bodyBranch.parentElement !== commonAncestor) {
+        bodyBranch = bodyBranch.parentElement;
+      }
+
+      if (composeBranch === bodyBranch) return;
+      if (composeBranch.nextElementSibling === bodyBranch) return; // already before body
+
+      console.log('[Gmail Reply All Button] moving compose branch above email body branch');
+      commonAncestor.insertBefore(composeBranch, bodyBranch);
     });
   }
 
