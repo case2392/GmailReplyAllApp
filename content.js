@@ -145,11 +145,9 @@
 
   const MORE_COLLAPSED = '[aria-label="More labels"]';
   const MORE_EXPANDED = '[aria-label="Less labels"]';
-  const GUARD_CLASS = 'gm-drag-guard';
 
   let dragActive = false;
   let dragStartedCollapsed = false;
-  let guardedRow = null;
 
   const findToggle = () => document.querySelector(`${MORE_COLLAPSED}, ${MORE_EXPANDED}`);
   const isExpanded = (el) => el?.getAttribute('aria-label') === 'Less labels';
@@ -159,27 +157,10 @@
     if (expanded) expanded.click();
   }
 
-  function applyGuard() {
+  function getMoreRowRect() {
     const toggle = findToggle();
-    if (!toggle) return;
-    // .wT is the container of the whole "More" block (toggle row + expanded
-    // children). Guarding just .n6 (the row) didn't stop expansion because
-    // Gmail's drag-over handler lives on the parent — pointer-events: none
-    // on the child means events still target the parent, which kept firing.
-    // .wT is a sibling of the Labels section, so drops onto labels remain
-    // interactive while the whole More block goes inert during the drag.
-    const el = toggle.closest('.wT') || toggle.closest('.n6') || toggle.parentElement;
-    if (el) {
-      el.classList.add(GUARD_CLASS);
-      guardedRow = el;
-    }
-  }
-
-  function removeGuard() {
-    if (guardedRow) {
-      guardedRow.classList.remove(GUARD_CLASS);
-      guardedRow = null;
-    }
+    const row = toggle?.closest('.n6');
+    return row?.getBoundingClientRect() || null;
   }
 
   function beginDrag() {
@@ -189,25 +170,14 @@
     // Only fight expansion if the user had it collapsed when the drag began;
     // a manually-expanded state should survive the drag.
     dragStartedCollapsed = !!toggle && !isExpanded(toggle);
-    if (dragStartedCollapsed) {
-      // pointer-events: none on the row prevents Gmail's own dragenter /
-      // dragover (or custom mousemove) handler from firing there, so it
-      // never tries to expand.
-      applyGuard();
-      // Belt-and-suspenders: in case Gmail already started expanding in the
-      // same tick (before our listener disabled the row), collapse once.
-      collapseNow();
-    }
+    if (dragStartedCollapsed) collapseNow();
   }
 
   const endDrag = () => {
     dragActive = false;
     dragStartedCollapsed = false;
-    removeGuard();
   };
 
-  // HTML5 drag events (not used by Gmail for emails in practice, but cheap
-  // to cover in case a future Gmail build switches to them).
   document.addEventListener('dragstart', beginDrag, true);
   document.addEventListener('dragend', endDrag, true);
   document.addEventListener('drop', endDrag, true);
@@ -239,8 +209,40 @@
     document.addEventListener(t, onUp, true)
   );
 
-  // Fallback: if Gmail somehow expands the section from outside the guarded
-  // row (e.g. via a document-level handler), observe and re-collapse.
+  // Previous attempts set pointer-events: none on the More row/block, but
+  // Gmail's expand handler sits on an ancestor that still receives events
+  // — pointer-events only hides the element as a target, not as a bubble
+  // path. Instead, intercept pointer events at the window capture phase:
+  // when a drag is live and the cursor is within the More row's bounding
+  // box, stopImmediatePropagation so no handler (including Gmail's) sees
+  // the event. No sidebar-wide side effects.
+  function interceptIfOverMoreRow(e) {
+    if (!dragActive || !dragStartedCollapsed) return;
+    const rect = getMoreRowRect();
+    if (!rect) return;
+    if (
+      e.clientX >= rect.left &&
+      e.clientX <= rect.right &&
+      e.clientY >= rect.top &&
+      e.clientY <= rect.bottom
+    ) {
+      e.stopImmediatePropagation();
+    }
+  }
+  [
+    'mousemove',
+    'pointermove',
+    'mouseover',
+    'pointerover',
+    'mouseenter',
+    'pointerenter',
+    'dragover',
+    'dragenter',
+  ].forEach((t) => {
+    window.addEventListener(t, interceptIfOverMoreRow, true);
+  });
+
+  // Fallback: if the section still gets expanded for any reason, collapse it.
   const expansionObserver = new MutationObserver(() => {
     if (dragActive && dragStartedCollapsed) collapseNow();
   });

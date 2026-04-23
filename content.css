@@ -55,8 +55,3 @@ html[dir] body[class*="dark"] .gm-reply-all-btn {
   color: #e8eaed;
 }
 
-/* Applied to the sidebar's "More" row while a drag is in progress, so
-   Gmail's drag-over handler on that row never fires and can't auto-expand. */
-.gm-drag-guard {
-  pointer-events: none !important;
-}
