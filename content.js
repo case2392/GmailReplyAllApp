@@ -145,9 +145,11 @@
 
   const MORE_COLLAPSED = '[aria-label="More labels"]';
   const MORE_EXPANDED = '[aria-label="Less labels"]';
+  const GUARD_CLASS = 'gm-drag-guard';
 
   let dragActive = false;
   let dragStartedCollapsed = false;
+  let guardedRow = null;
 
   const findToggle = () => document.querySelector(`${MORE_COLLAPSED}, ${MORE_EXPANDED}`);
   const isExpanded = (el) => el?.getAttribute('aria-label') === 'Less labels';
@@ -157,21 +159,50 @@
     if (expanded) expanded.click();
   }
 
+  function applyGuard() {
+    const toggle = findToggle();
+    if (!toggle) return;
+    // .n6 is the row containing the "More" toggle; fall back to parent.
+    const row = toggle.closest('.n6') || toggle.parentElement;
+    if (row) {
+      row.classList.add(GUARD_CLASS);
+      guardedRow = row;
+    }
+  }
+
+  function removeGuard() {
+    if (guardedRow) {
+      guardedRow.classList.remove(GUARD_CLASS);
+      guardedRow = null;
+    }
+  }
+
   document.addEventListener('dragstart', () => {
     dragActive = true;
     const toggle = findToggle();
     // Only fight expansion if the user had it collapsed when the drag began;
     // a manually-expanded state should survive the drag.
     dragStartedCollapsed = !!toggle && !isExpanded(toggle);
+    if (dragStartedCollapsed) {
+      // pointer-events: none on the row prevents Gmail's own dragenter /
+      // dragover handler from firing there, so it never tries to expand.
+      applyGuard();
+      // Belt-and-suspenders: in case Gmail already started expanding in the
+      // same tick (before our listener disabled the row), collapse once.
+      collapseNow();
+    }
   }, true);
 
   const endDrag = () => {
     dragActive = false;
     dragStartedCollapsed = false;
+    removeGuard();
   };
   document.addEventListener('dragend', endDrag, true);
   document.addEventListener('drop', endDrag, true);
 
+  // Fallback: if Gmail somehow expands the section from outside the guarded
+  // row (e.g. via a document-level handler), observe and re-collapse.
   const expansionObserver = new MutationObserver(() => {
     if (dragActive && dragStartedCollapsed) collapseNow();
   });
@@ -182,7 +213,6 @@
       setTimeout(startObserving, 500);
       return;
     }
-    // Observe the nearest sidebar-like ancestor so we don't scan the whole DOM.
     const container =
       toggle.closest('.yJ, .nM, [role="navigation"]') || toggle.parentElement;
     expansionObserver.observe(container, {
