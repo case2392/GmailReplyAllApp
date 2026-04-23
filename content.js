@@ -166,15 +166,19 @@
     const row = toggle.closest('.n6');
     const sibling = row?.nextElementSibling;
     if (!sibling || sibling === maskedEl) return;
-    // Sanity: only tag if this really is the expanded-More block. The sibling
-    // div persists in the DOM even while collapsed (just shown/hidden by
-    // Gmail), so we can't rely on aria-label state — match the content names
-    // instead to avoid accidentally hiding Labels or another section.
-    const text = (sibling.textContent || '').slice(0, 400);
-    if (!/Important|Spam|Trash|All Mail|Manage labels/i.test(text)) return;
+    // Tag unconditionally: the sibling slot next to the More row is reused
+    // as the expand container — when collapsed it's empty, when expanded
+    // Gmail populates it. Our display:none !important applies either way,
+    // so tagging up front keeps the expansion invisible the instant Gmail
+    // decides to populate it during a drag.
     sibling.classList.add(MASK_CLASS);
     maskedEl = sibling;
-    console.log('[Gmail Reply All Button] masked "More" expanded content');
+    console.log('[Gmail Reply All Button] masked More-row sibling', {
+      tag: sibling.tagName.toLowerCase(),
+      cls: sibling.className,
+      id: sibling.id,
+      textPrefix: (sibling.textContent || '').slice(0, 40),
+    });
   }
 
   function removeMask() {
