@@ -414,7 +414,8 @@
 // visible Delete button in the toolbar. Inbox view → deletes selected
 // emails; thread view → deletes the open thread. Skipped while focus is
 // in an input / textarea / compose body so it doesn't interfere with
-// editing text.
+// editing text. Also accepts Backspace because on Mac the key labeled
+// "Delete" sends key="Backspace" (only fn+Delete sends key="Delete").
 (function () {
   'use strict';
 
@@ -435,11 +436,12 @@
   }
 
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Delete') return;
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
     if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
     if (isEditableTarget(e.target)) return;
 
     const btn = findVisibleDeleteButton();
+    console.log('[Gmail Reply All Button] %s pressed; visible Delete button found = %s', e.key, !!btn);
     if (!btn) return;
 
     e.preventDefault();
