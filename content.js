@@ -426,23 +426,41 @@
     return tag === 'input' || tag === 'textarea';
   }
 
-  // Dispatch a synthetic Shift+3 (#) keystroke. Gmail's keyboard-shortcut
-  // handler is context-aware (delete the open thread, hovered row, or
-  // selected emails), so this does the right thing in any state — unlike
-  // clicking a specific toolbar Delete button, which only worked in
-  // inbox-list view with rows selected.
-  function dispatchHashShortcut() {
-    const opts = {
-      key: '#',
-      code: 'Digit3',
-      keyCode: 51,
-      which: 51,
-      shiftKey: true,
+  function findVisibleDeleteButton() {
+    const candidates = document.querySelectorAll('[aria-label="Delete"]');
+    for (const btn of candidates) {
+      const r = btn.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return btn;
+    }
+    return null;
+  }
+
+  // Synthesize a full mouse-click sequence at the element's center. Gmail's
+  // jsaction listeners on toolbar buttons fire on mousedown/mouseup, not on
+  // a bare .click() — which is why a plain element.click() didn't actually
+  // trigger deletion in v1.0.36. Synthetic keyboard events get rejected
+  // (isTrusted=false), but mouse events on a real element get processed.
+  function syntheticMouseClick(el) {
+    const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    const base = {
       bubbles: true,
       cancelable: true,
+      view: window,
+      clientX: x,
+      clientY: y,
+      screenX: x,
+      screenY: y,
+      button: 0,
+      detail: 1,
     };
-    document.dispatchEvent(new KeyboardEvent('keydown', opts));
-    document.dispatchEvent(new KeyboardEvent('keyup', opts));
+    const pointer = { ...base, pointerId: 1, pointerType: 'mouse' };
+    el.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, buttons: 1 }));
+    el.dispatchEvent(new MouseEvent('mousedown', { ...base, buttons: 1 }));
+    el.dispatchEvent(new PointerEvent('pointerup', { ...pointer, buttons: 0 }));
+    el.dispatchEvent(new MouseEvent('mouseup', { ...base, buttons: 0 }));
+    el.dispatchEvent(new MouseEvent('click', base));
   }
 
   document.addEventListener('keydown', (e) => {
@@ -450,9 +468,15 @@
     if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
     if (isEditableTarget(e.target)) return;
 
+    const btn = findVisibleDeleteButton();
+    if (!btn) {
+      console.log('[Gmail Reply All Button] %s pressed but no visible Delete button', e.key);
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
-    console.log('[Gmail Reply All Button] %s → dispatching # shortcut', e.key);
-    dispatchHashShortcut();
+    console.log('[Gmail Reply All Button] %s → mouse-click sequence on Delete', e.key);
+    syntheticMouseClick(btn);
   }, true);
 })();

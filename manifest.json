@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gmail Reply All Button",
-  "version": "1.0.37",
+  "version": "1.0.38",
   "description": "Gmail and Salesforce quality-of-life tweaks: Reply All button in the email header, Delete key deletes (no need for #), suppress sidebar More auto-expand during drag, move inline reply compose to top of thread, auto-disable Show Promotions on Salesforce Lead pages.",
   "content_scripts": [
     {
