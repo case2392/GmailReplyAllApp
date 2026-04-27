@@ -426,13 +426,23 @@
     return tag === 'input' || tag === 'textarea';
   }
 
-  function findVisibleDeleteButton() {
-    const candidates = document.querySelectorAll('[aria-label="Delete"]');
-    for (const btn of candidates) {
-      const r = btn.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) return btn;
-    }
-    return null;
+  // Dispatch a synthetic Shift+3 (#) keystroke. Gmail's keyboard-shortcut
+  // handler is context-aware (delete the open thread, hovered row, or
+  // selected emails), so this does the right thing in any state — unlike
+  // clicking a specific toolbar Delete button, which only worked in
+  // inbox-list view with rows selected.
+  function dispatchHashShortcut() {
+    const opts = {
+      key: '#',
+      code: 'Digit3',
+      keyCode: 51,
+      which: 51,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    };
+    document.dispatchEvent(new KeyboardEvent('keydown', opts));
+    document.dispatchEvent(new KeyboardEvent('keyup', opts));
   }
 
   document.addEventListener('keydown', (e) => {
@@ -440,12 +450,9 @@
     if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
     if (isEditableTarget(e.target)) return;
 
-    const btn = findVisibleDeleteButton();
-    console.log('[Gmail Reply All Button] %s pressed; visible Delete button found = %s', e.key, !!btn);
-    if (!btn) return;
-
     e.preventDefault();
     e.stopPropagation();
-    btn.click();
+    console.log('[Gmail Reply All Button] %s → dispatching # shortcut', e.key);
+    dispatchHashShortcut();
   }, true);
 })();
