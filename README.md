@@ -1,10 +1,11 @@
 # Gmail Reply All Button
 
-A tiny Chrome extension for three Gmail annoyances:
+A tiny Chrome extension for a few Gmail and Salesforce annoyances:
 
 1. Adds a **Reply all** button directly in Gmail's email-header toolbar, right next to the existing Reply button — no more clicking the 3-dot menu.
 2. Keeps the sidebar's **More** section from auto-expanding when you drag an email toward the sidebar.
 3. Moves the inline reply / reply-all / forward **compose panel to the top of the thread** so the most recent message stays visible while you type.
+4. On Salesforce Lightning Lead pages, automatically toggles **Show Promotions** off when you open a lead.
 
 ## Install (unpacked, developer mode)
 
@@ -35,7 +36,8 @@ To update the extension later, edit files and click the refresh icon on its tile
 ## Files
 
 - `manifest.json` — MV3 manifest
-- `content.js` — injection + click-routing logic
+- `content.js` — Gmail injection + click-routing logic
 - `content.css` — button styling (light + dark theme)
+- `salesforce.js` — Salesforce Lead-page auto-disable for Show Promotions
 
 No extension icons are bundled yet; Chrome shows the default puzzle-piece tile. To add your own, drop `icon16.png` / `icon48.png` / `icon128.png` into an `icons/` folder and re-add the `"icons": { ... }` block to `manifest.json`.
