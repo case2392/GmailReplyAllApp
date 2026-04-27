@@ -409,3 +409,41 @@
   if (document.body) start();
   else document.addEventListener('DOMContentLoaded', start, { once: true });
 })();
+
+// Map the Delete key to the same action as Gmail's # shortcut: click the
+// visible Delete button in the toolbar. Inbox view → deletes selected
+// emails; thread view → deletes the open thread. Skipped while focus is
+// in an input / textarea / compose body so it doesn't interfere with
+// editing text.
+(function () {
+  'use strict';
+
+  function isEditableTarget(el) {
+    if (!el) return false;
+    if (el.isContentEditable) return true;
+    const tag = el.tagName?.toLowerCase();
+    return tag === 'input' || tag === 'textarea';
+  }
+
+  function findVisibleDeleteButton() {
+    const candidates = document.querySelectorAll('[aria-label="Delete"]');
+    for (const btn of candidates) {
+      const r = btn.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return btn;
+    }
+    return null;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Delete') return;
+    if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+    if (isEditableTarget(e.target)) return;
+
+    const btn = findVisibleDeleteButton();
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    btn.click();
+  }, true);
+})();

@@ -3,9 +3,10 @@
 A tiny Chrome extension for a few Gmail and Salesforce annoyances:
 
 1. Adds a **Reply all** button directly in Gmail's email-header toolbar, right next to the existing Reply button — no more clicking the 3-dot menu.
-2. Keeps the sidebar's **More** section from auto-expanding when you drag an email toward the sidebar.
-3. Moves the inline reply / reply-all / forward **compose panel to the top of the thread** so the most recent message stays visible while you type.
-4. On Salesforce Lightning Lead pages, automatically toggles **Show Promotions** off when you open a lead.
+2. Maps the **Delete** key to delete (clicking the visible toolbar Delete button), so you don't have to use Gmail's `#` shortcut.
+3. Keeps the sidebar's **More** section from auto-expanding when you drag an email toward the sidebar.
+4. Moves the inline reply / reply-all / forward **compose panel to the top of the thread** so the most recent message stays visible while you type.
+5. On Salesforce Lightning Lead pages, automatically toggles **Show Promotions** off when you open a lead.
 
 ## Install (unpacked, developer mode)
 
